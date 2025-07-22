@@ -31,7 +31,8 @@ namespace {
 bool IsOk(handle status_or) {
   detail::make_caster<absl::Status> caster;
   // "Not a status" means "ok" for StatusOr.
-  if (!caster.load(status_or, true)) return true;
+  if (!caster.load(status_or, true))
+    return true;
   return static_cast<absl::Status &>(caster).ok();
 }
 
@@ -91,7 +92,7 @@ absl::Status WrapUnknownError(absl::string_view message) {
 }
 
 void def_status_factory(
-    module& m, const char* name,
+    module &m, const char *name,
     absl::Status (*absl_status_factory)(absl::string_view message)) {
   m.def(
       name,
@@ -101,8 +102,9 @@ void def_status_factory(
       arg("message"));
 }
 
-absl::StatusOr<absl::Status*> StatusRawPtrFromCapsule(
-    const object& obj, bool enable_as_capsule_method = true) {
+absl::StatusOr<absl::Status *>
+StatusRawPtrFromCapsule(const object &obj,
+                        bool enable_as_capsule_method = true) {
   return pybind11_abseil::cpp_capsule_tools::RawPtrFromCapsule<absl::Status>(
       obj.ptr(), "::absl::Status",
       enable_as_capsule_method ? "as_absl_Status" : nullptr);
@@ -146,7 +148,7 @@ handle PyStatusNotOkTypeInUse() {
   type_in_use = object(module_in_use.attr("StatusNotOk")).release();
   return type_in_use;
 }
-}  // namespace
+} // namespace
 
 namespace internal {
 
@@ -193,52 +195,52 @@ void RegisterStatusBindings(module m) {
 
   m.def(
       "StatusCodeAsInt",
-      [](const absl::StatusCode& code) { return static_cast<int>(code); },
+      [](const absl::StatusCode &code) { return static_cast<int>(code); },
       arg("code"));
 
   class_<absl::Status> py_class_status(m, "Status");
   py_class_status.def(init())
       .def(init())
-      .def(init([](InitFromTag init_from_tag, const object& obj) {
+      .def(init([](InitFromTag init_from_tag, const object &obj) {
              switch (init_from_tag) {
-               case InitFromTag::capsule:
-               case InitFromTag::capsule_direct_only: {
-                 bool enable_as_capsule_method =
-                     (init_from_tag == InitFromTag::capsule);
-                 absl::StatusOr<absl::Status*> raw_ptr =
-                     StatusRawPtrFromCapsule(obj, enable_as_capsule_method);
-                 if (!raw_ptr.ok()) {
-                   throw value_error(std::string(raw_ptr.status().message()));
-                 }
-                 return std::unique_ptr<absl::Status>{
-                     new absl::Status{*raw_ptr.value()}};
+             case InitFromTag::capsule:
+             case InitFromTag::capsule_direct_only: {
+               bool enable_as_capsule_method =
+                   (init_from_tag == InitFromTag::capsule);
+               absl::StatusOr<absl::Status *> raw_ptr =
+                   StatusRawPtrFromCapsule(obj, enable_as_capsule_method);
+               if (!raw_ptr.ok()) {
+                 throw value_error(std::string(raw_ptr.status().message()));
                }
-               case InitFromTag::serialized: {
-                 auto state = cast<tuple>(obj);
-                 if (len(state) != 3) {
-                   throw value_error(
-                       absl::StrCat("Unexpected len(state) == ", len(state),
-                                    " [", __FILE__, ":", __LINE__, "]"));
-                 }
-                 auto code = cast<absl::StatusCode>(state[0]);
-                 auto message = cast<std::string>(state[1]);
-                 auto all_payloads = cast<tuple>(state[2]);
-                 auto status = std::unique_ptr<absl::Status>{
-                     new absl::Status{code, message}};
-                 for (auto ap_item_obj : all_payloads) {
-                   auto ap_item_tup = cast<tuple>(ap_item_obj);
-                   if (len(ap_item_tup) != 2) {
-                     throw value_error(absl::StrCat(
-                         "Unexpected len(tuple) == ", len(ap_item_tup),
-                         " where (type_url, payload) is expected [", __FILE__,
-                         ":", __LINE__, "]"));
-                   }
-                   auto type_url = cast<absl::string_view>(ap_item_tup[0]);
-                   auto payload = cast<absl::string_view>(ap_item_tup[1]);
-                   status->SetPayload(type_url, absl::Cord(payload));
-                 }
-                 return status;
+               return std::unique_ptr<absl::Status>{
+                   new absl::Status{*raw_ptr.value()}};
+             }
+             case InitFromTag::serialized: {
+               auto state = cast<tuple>(obj);
+               if (len(state) != 3) {
+                 throw value_error(
+                     absl::StrCat("Unexpected len(state) == ", len(state), " [",
+                                  __FILE__, ":", __LINE__, "]"));
                }
+               auto code = cast<absl::StatusCode>(state[0]);
+               auto message = cast<std::string>(state[1]);
+               auto all_payloads = cast<tuple>(state[2]);
+               auto status = std::unique_ptr<absl::Status>{
+                   new absl::Status{code, message}};
+               for (auto ap_item_obj : all_payloads) {
+                 auto ap_item_tup = cast<tuple>(ap_item_obj);
+                 if (len(ap_item_tup) != 2) {
+                   throw value_error(absl::StrCat(
+                       "Unexpected len(tuple) == ", len(ap_item_tup),
+                       " where (type_url, payload) is expected [", __FILE__,
+                       ":", __LINE__, "]"));
+                 }
+                 auto type_url = cast<absl::string_view>(ap_item_tup[0]);
+                 auto payload = cast<absl::string_view>(ap_item_tup[1]);
+                 status->SetPayload(type_url, absl::Cord(payload));
+               }
+               return status;
+             }
              }
              throw std::runtime_error(absl::StrCat(
                  "Meant to be unreachable [", __FILE__, ":", __LINE__, "]"));
@@ -248,28 +250,30 @@ void RegisterStatusBindings(module m) {
       .def("ok", &absl::Status::ok)
       .def("code", &absl::Status::code)
       .def("code_int",
-           [](const absl::Status& self) {
+           [](const absl::Status &self) {
              return static_cast<int>(self.code());
            })
       .def("message",
-           [](const absl::Status& self) {
+           [](const absl::Status &self) {
              return decode_utf8_replace(self.message());
            })
       .def("message_bytes",
-           [](const absl::Status& self) {
+           [](const absl::Status &self) {
              return bytes(self.message().data(), self.message().size());
            })
       .def("update",
-           (void(absl::Status::*)(const absl::Status&)) & absl::Status::Update,
+           (void (absl::Status::*)(const absl::Status &))&absl::Status::Update,
            arg("other"))
-      .def("to_string",
-           [](const absl::Status& s, bool with_source_location) {
-             if (with_source_location) {
-             }
-             return decode_utf8_replace(s.ToString());
-           }, kw_only{}, arg("with_source_location") = false)
+      .def(
+          "to_string",
+          [](const absl::Status &s, bool with_source_location) {
+            if (with_source_location) {
+            }
+            return decode_utf8_replace(s.ToString());
+          },
+          kw_only{}, arg("with_source_location") = false)
       .def("status_not_ok_str",
-           [](const absl::Status& s) {
+           [](const absl::Status &s) {
              std::string code_str = absl::StatusCodeToString(s.code());
              if (code_str.empty()) {
                // This code is meant to be unreachable, but we want to produce
@@ -291,19 +295,19 @@ void RegisterStatusBindings(module m) {
       .def("raw_code", &absl::Status::raw_code)
       .def("IgnoreError", &absl::Status::IgnoreError)
       .def("SetPayload",
-           [](absl::Status& self, absl::string_view type_url,
+           [](absl::Status &self, absl::string_view type_url,
               absl::string_view payload) {
              self.SetPayload(type_url, absl::Cord(payload));
            })
       .def("ErasePayload",
-           [](absl::Status& self, absl::string_view type_url) {
+           [](absl::Status &self, absl::string_view type_url) {
              return self.ErasePayload(type_url);
            })
       .def("AllPayloads",
-           [](const absl::Status& s) {
+           [](const absl::Status &s) {
              list key_value_pairs;
              s.ForEachPayload([&key_value_pairs](absl::string_view key,
-                                                 const absl::Cord& value) {
+                                                 const absl::Cord &value) {
                key_value_pairs.append(make_tuple(bytes(std::string(key)),
                                                  bytes(std::string(value))));
              });
@@ -312,13 +316,13 @@ void RegisterStatusBindings(module m) {
              return tuple(key_value_pairs);
            })
       .def("__eq__",
-           [](const absl::Status& self, const object& rhs) {
-             absl::StatusOr<absl::Status*> rhs_ptr = StatusRawPtrFromCapsule(
+           [](const absl::Status &self, const object &rhs) {
+             absl::StatusOr<absl::Status *> rhs_ptr = StatusRawPtrFromCapsule(
                  rhs, /*enable_as_capsule_method=*/true);
              return rhs_ptr.ok() && *rhs_ptr.value() == self;
            })
       .def("__hash__",
-           [](const absl::Status& self) {
+           [](const absl::Status &self) {
              // Payload is ignored intentionally to minimize runtime.
              return boost_hash_combine(
                  std::hash<int>{}(self.raw_code()),
@@ -331,7 +335,7 @@ void RegisterStatusBindings(module m) {
            })
       .def(
           "__reduce_ex__",
-          [](const object& self, int) {
+          [](const object &self, int) {
             return make_tuple(
                 self.attr("__class__"),
                 make_tuple(InitFromTag::serialized,
@@ -340,15 +344,14 @@ void RegisterStatusBindings(module m) {
                                       self.attr("AllPayloads")())));
           },
           arg("protocol") = -1)
-      .def("as_absl_Status", [](absl::Status* self) -> object {
-        return reinterpret_steal<object>(
-            PyCapsule_New(static_cast<void*>(self), "::absl::Status", nullptr));
+      .def("as_absl_Status", [](absl::Status *self) -> object {
+        return reinterpret_steal<object>(PyCapsule_New(
+            static_cast<void *>(self), "::absl::Status", nullptr));
       });
 
-  py_class_status.def("__str__",
-       [](const absl::Status& s) {
-         return decode_utf8_replace(s.ToString());
-       });
+  py_class_status.def("__str__", [](const absl::Status &s) {
+    return decode_utf8_replace(s.ToString());
+  });
 
   m.def("is_ok", &IsOk, arg("status_or"),
         "Returns false only if passed a non-ok status; otherwise returns true. "
@@ -427,8 +430,9 @@ void RegisterStatusBindings(module m) {
   // PyStatusNotOk.
   register_exception_translator([](std::exception_ptr p) {
     try {
-      if (p) std::rethrow_exception(p);
-    } catch (const StatusNotOk& e) {
+      if (p)
+        std::rethrow_exception(p);
+    } catch (const StatusNotOk &e) {
       PyErr_SetObject(PyStatusNotOkTypeInUse().ptr(),
                       PyStatusNotOkTypeInUse()(
                           google::NoThrowStatus<absl::Status>(e.status()))
@@ -436,9 +440,9 @@ void RegisterStatusBindings(module m) {
     }
   });
 
-  m.def("BuildStatusNotOk", [](absl::StatusCode code, const std::string& msg) {
-    return PyStatusNotOkTypeInUse()(
-        google::NoThrowStatus<absl::Status>(absl::Status(code, msg)));
+  m.def("BuildStatusNotOk", [](int code, const std::string &msg) {
+    return PyStatusNotOk(google::NoThrowStatus<absl::Status>(
+        absl::Status(static_cast<absl::StatusCode>(code), msg)));
   });
 
   m.def("_make_py_ok_status_singleton", []() {
@@ -448,6 +452,6 @@ void RegisterStatusBindings(module m) {
   });
 }
 
-}  // namespace internal
-}  // namespace google
-}  // namespace pybind11
+} // namespace internal
+} // namespace google
+} // namespace pybind11

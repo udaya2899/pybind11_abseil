@@ -35,6 +35,41 @@ class StatusCodeTest(absltest.TestCase):
 
 class StatusTest(parameterized.TestCase):
 
+  def test_pass_status(self):
+    test_status = status.Status(status.StatusCode.CANCELLED, 'test')
+    self.assertTrue(
+        status_example.check_status(test_status, status.StatusCode.CANCELLED))
+
+  def test_return_status_return_type_from_doc(self):
+    self.assertEndsWith(
+        docstring_signature(status_example.return_status), ' -> None')
+
+  def test_return_ok(self):
+    # The return_status function should convert an ok status to None.
+    self.assertIsNone(status_example.return_status(status.StatusCode.OK))
+
+  def test_return_not_ok(self):
+    # The return_status function should convert a non-ok status to an exception.
+    with self.assertRaises(status.StatusNotOk) as cm:
+      status_example.return_status(status.StatusCode.CANCELLED, 'test')
+    self.assertEqual(cm.exception.status.code(), status.StatusCode.CANCELLED)
+    self.assertEqual(cm.exception.status.message(), 'test')
+    self.assertEqual(cm.exception.code, int(status.StatusCode.CANCELLED))
+    self.assertEqual(cm.exception.message, 'test')
+
+  def test_build_status_not_ok_enum(self):
+    e = status.BuildStatusNotOk(status.StatusCode.INVALID_ARGUMENT, 'Msg enum.')
+    self.assertEqual(e.status.code(), status.StatusCode.INVALID_ARGUMENT)
+    self.assertEqual(e.code, int(status.StatusCode.INVALID_ARGUMENT))
+    self.assertEqual(e.message, 'Msg enum.')
+
+  def test_build_status_not_ok_int(self):
+    e = status.BuildStatusNotOk(
+        int(status.StatusCode.ALREADY_EXISTS), 'Msg int.')
+    self.assertEqual(e.status.code(), status.StatusCode.ALREADY_EXISTS)
+    self.assertEqual(e.code, int(status.StatusCode.ALREADY_EXISTS))
+    self.assertEqual(e.message, 'Msg int.')
+
   def test_status_not_ok_status(self):
     e = status.StatusNotOk(status.Status(status.StatusCode.CANCELLED, 'Cnclld'))
     self.assertEqual(e.code, int(status.StatusCode.CANCELLED))
