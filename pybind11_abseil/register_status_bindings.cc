@@ -441,8 +441,7 @@ void RegisterStatusBindings(module m) {
   });
 
   m.def("BuildStatusNotOk", [](int code, const std::string &msg) {
-    return PyStatusNotOk(google::NoThrowStatus<absl::Status>(
-        absl::Status(static_cast<absl::StatusCode>(code), msg)));
+    return StatusNotOk(absl::Status(static_cast<absl::StatusCode>(code), msg));
   });
 
   m.def("_make_py_ok_status_singleton", []() {
